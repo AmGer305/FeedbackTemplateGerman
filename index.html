@@ -399,9 +399,9 @@
 
         /* Buttons */
         .btn-primary {
-            background: linear-gradient(135deg, var(--accent), var(--accent-soft));
-            color: var(--bg-dark);
-            border: none;
+            background: rgba(201, 162, 39, 0.12);
+            color: var(--accent-soft);
+            border: 1px solid var(--tag-border);
             padding: 1rem 2rem;
             font-size: 1.1rem;
             font-weight: 600;
@@ -411,12 +411,15 @@
             display: inline-flex;
             align-items: center;
             gap: 0.75rem;
-            box-shadow: 0 4px 20px var(--accent-glow);
+            box-shadow: none;
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px var(--accent-glow);
+            background: rgba(201, 162, 39, 0.22);
+            border-color: var(--accent);
+            color: var(--accent);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(201, 162, 39, 0.15);
         }
 
         .btn-secondary {
@@ -551,6 +554,65 @@
 
         .copy-success.show {
             opacity: 1;
+        }
+
+        /* Dynamic List Items */
+        .list-items {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .list-item-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .list-bullet {
+            color: var(--accent-soft);
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            width: 1rem;
+            text-align: center;
+        }
+
+        .list-item-input {
+            flex: 1;
+            padding: 0.6rem 0.8rem;
+            font-size: 0.95rem;
+        }
+
+        .remove-list-btn {
+            background: rgba(248, 113, 113, 0.1);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 0.75rem;
+            padding: 0.3rem 0.55rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .remove-list-btn:hover {
+            background: rgba(248, 113, 113, 0.2);
+            border-color: var(--danger);
+        }
+
+        .add-list-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.85rem;
+            padding: 0.4rem 0;
+            transition: color 0.2s;
+            text-align: left;
+        }
+
+        .add-list-btn:hover {
+            color: var(--accent);
         }
 
         /* Responsive */
@@ -764,7 +826,14 @@
                 <!-- Kritische Anmerkungen -->
                 <div class="field-group">
                     <label>Kritische Anmerkungen</label>
-                    <textarea id="critique" rows="4" placeholder="Formatierungsschwächen, Logiklöcher, Pacing-Probleme, etc."></textarea>
+                    <div class="list-items" id="critiqueList">
+                        <div class="list-item-row">
+                            <span class="list-bullet">–</span>
+                            <input type="text" class="list-item-input" placeholder="Anmerkung eingeben...">
+                            <button type="button" class="remove-list-btn" onclick="removeListItem(this)" style="display:none;">✕</button>
+                        </div>
+                    </div>
+                    <button type="button" class="add-list-btn" onclick="addListItem('critiqueList')">+ Punkt hinzufügen</button>
                 </div>
 
                 <!-- Positive Eindrücke -->
@@ -793,7 +862,14 @@
                             </div>
                         </div>
                     </div>
-                    <textarea id="positive" rows="4" placeholder="Was dir besonders gefallen hat..."></textarea>
+                    <div class="list-items" id="positiveList">
+                        <div class="list-item-row">
+                            <span class="list-bullet">–</span>
+                            <input type="text" class="list-item-input" placeholder="Was dir gefallen hat...">
+                            <button type="button" class="remove-list-btn" onclick="removeListItem(this)" style="display:none;">✕</button>
+                        </div>
+                    </div>
+                    <button type="button" class="add-list-btn" onclick="addListItem('positiveList')">+ Punkt hinzufügen</button>
                 </div>
             </div>
 
@@ -954,6 +1030,45 @@
             });
         }
 
+        // List item functions
+        function addListItem(listId) {
+            const list = document.getElementById(listId);
+            const row = document.createElement('div');
+            row.className = 'list-item-row';
+            row.innerHTML = `
+                <span class="list-bullet">–</span>
+                <input type="text" class="list-item-input" placeholder="...">
+                <button type="button" class="remove-list-btn" onclick="removeListItem(this)">✕</button>
+            `;
+            list.appendChild(row);
+            row.querySelector('input').focus();
+            updateListRemoveButtons(listId);
+        }
+
+        function removeListItem(btn) {
+            const row = btn.closest('.list-item-row');
+            const list = row.closest('.list-items');
+            row.remove();
+            updateListRemoveButtons(list.id);
+        }
+
+        function updateListRemoveButtons(listId) {
+            const rows = document.querySelectorAll(`#${listId} .list-item-row`);
+            rows.forEach(row => {
+                const btn = row.querySelector('.remove-list-btn');
+                btn.style.display = rows.length > 1 ? 'block' : 'none';
+            });
+        }
+
+        function getListItems(listId) {
+            const items = [];
+            document.querySelectorAll(`#${listId} .list-item-input`).forEach(input => {
+                const v = input.value.trim();
+                if (v) items.push(v);
+            });
+            return items;
+        }
+
         function getChapterTitle() {
             const type = document.getElementById('chapterType').value;
             const number = document.getElementById('chapterNumber').value.trim();
@@ -981,8 +1096,8 @@
             const chapterTitle = getChapterTitle();
             const plot = document.getElementById('plot').value.trim();
             const chapterFunction = document.getElementById('chapterFunction').value.trim();
-            const critique = document.getElementById('critique').value.trim();
-            const positive = document.getElementById('positive').value.trim();
+            const critique = getListItems('critiqueList');
+            const positive = getListItems('positiveList');
 
             // Collect quotes
             const quotes = [];
@@ -1021,7 +1136,7 @@
             });
 
             // Summary feedback header
-            const hasSummary = characters.length > 0 || plot || chapterFunction || critique || positive;
+            const hasSummary = characters.length > 0 || plot || chapterFunction || critique.length > 0 || positive.length > 0;
             if (hasSummary && quotes.length > 0) {
                 html += `<p style="font-family: 'Times New Roman', serif; font-size: 12pt; font-weight: bold; margin-top: 20px;">Feedback zu ${chapterTitle}:</p>`;
             }
@@ -1043,14 +1158,18 @@
                 html += `<p style="font-family: 'Times New Roman', serif; font-size: 12pt;">${chapterFunction}</p>`;
             }
 
-            if (critique) {
+            if (critique.length > 0) {
                 html += `<p style="font-family: 'Times New Roman', serif; font-size: 12pt; font-weight: bold; margin-top: 16px;">Kritische Anmerkungen:</p>`;
-                html += `<p style="font-family: 'Times New Roman', serif; font-size: 12pt;">${critique}</p>`;
+                critique.forEach(item => {
+                    html += `<p style="font-family: 'Times New Roman', serif; font-size: 12pt; margin-left: 20px;">– ${item}</p>`;
+                });
             }
 
-            if (positive) {
+            if (positive.length > 0) {
                 html += `<p style="font-family: 'Times New Roman', serif; font-size: 12pt; font-weight: bold; margin-top: 16px;">Positive Eindrücke:</p>`;
-                html += `<p style="font-family: 'Times New Roman', serif; font-size: 12pt;">${positive}</p>`;
+                positive.forEach(item => {
+                    html += `<p style="font-family: 'Times New Roman', serif; font-size: 12pt; margin-left: 20px;">– ${item}</p>`;
+                });
             }
 
             // Build preview
@@ -1083,13 +1202,17 @@
                 preview += `<div class="preview-heading">Was das Kapitel für mich leistet:</div>`;
                 preview += `<div class="preview-content">${chapterFunction}</div>`;
             }
-            if (critique) {
+            if (critique.length > 0) {
                 preview += `<div class="preview-heading">Kritische Anmerkungen:</div>`;
-                preview += `<div class="preview-content">${critique}</div>`;
+                critique.forEach(item => {
+                    preview += `<div class="preview-content" style="margin-left: 1rem;">– ${item}</div>`;
+                });
             }
-            if (positive) {
+            if (positive.length > 0) {
                 preview += `<div class="preview-heading">Positive Eindrücke:</div>`;
-                preview += `<div class="preview-content">${positive}</div>`;
+                positive.forEach(item => {
+                    preview += `<div class="preview-content" style="margin-left: 1rem;">– ${item}</div>`;
+                });
             }
 
             document.getElementById('outputPreview').innerHTML = preview;
@@ -1162,6 +1285,17 @@
             firstChar.querySelector('.remove-btn').style.display = 'none';
             firstChar.querySelector('.card-label').textContent = 'Charakter #1';
             characterCount = 1;
+            
+            // Reset lists
+            ['critiqueList', 'positiveList'].forEach(listId => {
+                const list = document.getElementById(listId);
+                const rows = list.querySelectorAll('.list-item-row');
+                rows.forEach((row, i) => { if (i > 0) row.remove(); });
+                const first = list.querySelector('.list-item-input');
+                if (first) { first.value = ''; }
+                const btn = list.querySelector('.remove-list-btn');
+                if (btn) btn.style.display = 'none';
+            });
             
             document.getElementById('outputSection').classList.remove('visible');
         }
