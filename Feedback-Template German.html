@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manuskript-Feedback Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f0f1a;
+            --bg-gradient-1: #1a1a2e;
+            --bg-gradient-2: #16213e;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-highlight: rgba(255, 255, 255, 0.15);
+            --text-primary: #e8e6e3;
+            --text-secondary: #9a98a6;
+            --accent: #c9a227;
+            --accent-glow: rgba(201, 162, 39, 0.3);
+            --accent-soft: #d4b853;
+            --success: #4ade80;
+            --danger: #f87171;
+            --tag-bg: rgba(201, 162, 39, 0.15);
+            --tag-border: rgba(201, 162, 39, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Source Sans 3', sans-serif;
+            background: var(--bg-dark);
+            background-image: 
+                radial-gradient(ellipse at 20% 20%, rgba(201, 162, 39, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+                linear-gradient(135deg, var(--bg-gradient-1) 0%, var(--bg-gradient-2) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: var(--accent);
+            letter-spacing: 0.02em;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 40px var(--accent-glow);
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        /* Glassmorphism Cards */
+        .input-section {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 var(--glass-highlight);
+        }
+
+        .input-section.compact {
+            padding: 1.5rem 2rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-header.no-margin {
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex: 1;
+        }
+
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 1.2em;
+            background: linear-gradient(180deg, var(--accent), var(--accent-soft));
+            border-radius: 2px;
+            box-shadow: 0 0 8px var(--accent-glow);
+        }
+
+        /* Chapter Input */
+        .chapter-row {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .chapter-row select {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+            cursor: pointer;
+            min-width: 140px;
+        }
+
+        .chapter-row select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .chapter-row input {
+            flex: 1;
+        }
+
+        /* Tooltip / Hint System */
+        .hint-trigger {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            font-size: 1.1rem;
+            cursor: help;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .hint-trigger:hover {
+            background: var(--glass-highlight);
+            border-color: var(--accent);
+            box-shadow: 0 0 12px var(--accent-glow);
+            transform: scale(1.1);
+        }
+
+        .hint-box {
+            position: absolute;
+            top: calc(100% + 12px);
+            right: 0;
+            width: 320px;
+            background: rgba(26, 26, 46, 0.98);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-8px);
+            transition: all 0.3s ease;
+            z-index: 100;
+            box-shadow: 
+                0 16px 48px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 var(--glass-highlight);
+        }
+
+        .hint-trigger:hover .hint-box {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .hint-box h4 {
+            color: var(--accent);
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .hint-box ul {
+            list-style: none;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .hint-box li {
+            padding: 0.35rem 0;
+            padding-left: 1.2rem;
+            position: relative;
+        }
+
+        .hint-box li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--accent-soft);
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        label small {
+            font-weight: 400;
+            color: var(--text-secondary);
+        }
+
+        textarea, input[type="text"] {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+            resize: vertical;
+        }
+
+        textarea::placeholder, input::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.6;
+        }
+
+        textarea:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .quote-input {
+            font-family: 'Cormorant Garamond', serif;
+            font-style: italic;
+            font-size: 1.1rem;
+            min-height: 100px;
+        }
+
+        .field-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .field-group:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Quick Tags */
+        .quick-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .quick-tag {
+            background: var(--tag-bg);
+            border: 1px solid var(--tag-border);
+            color: var(--accent-soft);
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .quick-tag:hover {
+            background: rgba(201, 162, 39, 0.25);
+            border-color: var(--accent);
+            color: var(--accent);
+            transform: translateY(-1px);
+        }
+
+        .quick-tag:active {
+            transform: translateY(0);
+        }
+
+        .quick-tags-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        /* Cards Grid (for quotes and characters) */
+        .cards-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .card-item {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .card-item:hover {
+            border-color: var(--glass-highlight);
+        }
+
+        .card-item input {
+            margin-bottom: 0.75rem;
+        }
+
+        .card-item textarea {
+            min-height: 80px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .add-card {
+            background: transparent;
+            border: 2px dashed var(--glass-border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .add-card:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(201, 162, 39, 0.05);
+            box-shadow: 0 0 20px rgba(201, 162, 39, 0.1);
+        }
+
+        .remove-btn {
+            background: rgba(248, 113, 113, 0.1);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 0.8rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .remove-btn:hover {
+            background: rgba(248, 113, 113, 0.2);
+            border-color: var(--danger);
+        }
+
+        /* Buttons */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-soft));
+            color: var(--bg-dark);
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px var(--accent-glow);
+        }
+
+        .btn-secondary {
+            background: var(--glass-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--glass-border);
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(8px);
+        }
+
+        .btn-secondary:hover {
+            background: var(--glass-highlight);
+            border-color: var(--accent);
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        /* Output Section */
+        .output-section {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-top: 2rem;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 var(--glass-highlight);
+            display: none;
+        }
+
+        .output-section.visible {
+            display: block;
+            animation: slideUp 0.4s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .output-preview {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 1.5rem;
+            font-family: 'Times New Roman', serif;
+            line-height: 1.7;
+            color: var(--text-primary);
+        }
+
+        .preview-chapter {
+            font-size: 14pt;
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .preview-quote {
+            font-size: 13pt;
+            font-style: italic;
+            margin-bottom: 0.5rem;
+            color: var(--accent-soft);
+        }
+
+        .preview-comment {
+            font-size: 12pt;
+            margin-left: 2rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px dashed var(--glass-border);
+        }
+
+        .preview-heading {
+            font-weight: bold;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            font-size: 12pt;
+            color: var(--accent);
+        }
+
+        .preview-content {
+            font-size: 12pt;
+            margin-bottom: 1rem;
+        }
+
+        .copy-success {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #065f46, #047857);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            font-weight: 600;
+            box-shadow: 0 8px 32px rgba(4, 120, 87, 0.4);
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 100;
+            backdrop-filter: blur(8px);
+        }
+
+        .copy-success.show {
+            opacity: 1;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .container {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .input-section {
+                padding: 1.25rem;
+            }
+
+            .chapter-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .chapter-row select {
+                width: 100%;
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+
+            .btn-primary, .btn-secondary {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .hint-box {
+                width: 280px;
+                right: -100px;
+            }
+
+            .quick-tags {
+                gap: 0.4rem;
+            }
+
+            .quick-tag {
+                font-size: 0.8rem;
+                padding: 0.3rem 0.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Manuskript-Feedback</h1>
+        </header>
+
+        <form id="feedbackForm">
+            <!-- Kapitel -->
+            <div class="input-section compact">
+                <div class="section-header no-margin">
+                    <h2 class="section-title">Kapitel</h2>
+                </div>
+                <div class="chapter-row">
+                    <select id="chapterType">
+                        <option value="prolog">Prolog</option>
+                        <option value="kapitel" selected>Kapitel</option>
+                        <option value="epilog">Epilog</option>
+                        <option value="szene">Szene</option>
+                        <option value="custom">Eigene Bezeichnung</option>
+                    </select>
+                    <input type="text" id="chapterNumber" placeholder="Nummer oder Titel (z.B. '1' oder 'Der Anfang')">
+                </div>
+            </div>
+
+            <!-- Zitate & Kommentare -->
+            <div class="input-section">
+                <div class="section-header">
+                    <h2 class="section-title">Inline-Kommentare</h2>
+                </div>
+                
+                <div class="cards-grid" id="quotesGrid">
+                    <div class="card-item" data-index="0">
+                        <div class="card-header">
+                            <span class="card-label">Zitat #1</span>
+                            <button type="button" class="remove-btn" onclick="removeQuote(0)" style="display:none;">✕ entfernen</button>
+                        </div>
+                        <textarea class="quote-input quote-text" placeholder="Hier den zu kommentierenden Text einfügen..."></textarea>
+                        <label style="margin-top: 1rem;"><small>Dein Kommentar:</small></label>
+                        <span class="quick-tags-label">Schnell-Tags (klicken zum Einfügen):</span>
+                        <div class="quick-tags">
+                            <span class="quick-tag" onclick="insertTag(this, 'Tell.')">Tell.</span>
+                            <span class="quick-tag" onclick="insertTag(this, 'Show!')">Show!</span>
+                            <span class="quick-tag" onclick="insertTag(this, 'Satzbau.')">Satzbau.</span>
+                            <span class="quick-tag" onclick="insertTag(this, 'Wortwiederholung.')">Wortwiederholung.</span>
+                            <span class="quick-tag" onclick="insertTag(this, 'Love it.')">Love it.</span>
+                            <span class="quick-tag" onclick="insertTag(this, 'Wunderschön.')">Wunderschön.</span>
+                            <span class="quick-tag" onclick="insertTag(this, 'Redundant.')">Redundant.</span>
+                            <span class="quick-tag" onclick="insertTag(this, 'Unklar.')">Unklar.</span>
+                            <span class="quick-tag" onclick="insertTag(this, 'Pacing.')">Pacing.</span>
+                            <span class="quick-tag" onclick="insertTag(this, 'Dialog 👍')">Dialog 👍</span>
+                            <span class="quick-tag" onclick="insertTag(this, 'As-you-know-Bob.')">As-you-know-Bob.</span>
+                            <span class="quick-tag" onclick="insertTag(this, 'Metapher passt nicht.')">Metapher ✗</span>
+                        </div>
+                        <textarea class="quote-comment" rows="2" placeholder="Deine Anmerkung zu dieser Stelle..."></textarea>
+                    </div>
+                    <button type="button" class="add-card" onclick="addQuote()">
+                        <span>+</span> Weiteres Zitat hinzufügen
+                    </button>
+                </div>
+            </div>
+
+            <!-- Zusammenfassendes Feedback -->
+            <div class="input-section">
+                <div class="section-header">
+                    <h2 class="section-title">Feedback zum Kapitel</h2>
+                </div>
+
+                <!-- Charakter-Feedback -->
+                <div class="field-group">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                        <label style="margin-bottom: 0;">Charakter</label>
+                        <div class="hint-trigger">
+                            💡
+                            <div class="hint-box">
+                                <h4>Fragen zum Nachdenken:</h4>
+                                <ul>
+                                    <li>Ist der Charakter zu passiv? Reagiert er nur?</li>
+                                    <li>Hat er eigene Ziele, Wünsche, Ängste?</li>
+                                    <li>Sensorische Erfahrungen: Was sieht, hört, riecht, schmeckt, fühlt er?</li>
+                                    <li>Stimmt die Stimme? Klingt der Dialog authentisch?</li>
+                                    <li>Sind Emotionen gezeigt oder nur benannt?</li>
+                                    <li>Gibt es innere Konflikte?</li>
+                                    <li>Entwickelt sich der Charakter weiter?</li>
+                                    <li>Ist sein Verhalten konsistent mit früheren Szenen?</li>
+                                    <li>Wirkt die Körpersprache natürlich?</li>
+                                    <li>Gibt es Manierismen oder Ticks?</li>
+                                    <li>Wie unterscheidet er sich von anderen Charakteren?</li>
+                                    <li>Sind Gedanken und Handlungen kongruent?</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cards-grid" id="characterGrid">
+                        <div class="card-item" data-index="0">
+                            <div class="card-header">
+                                <span class="card-label">Charakter #1</span>
+                                <button type="button" class="remove-btn" onclick="removeCharacter(0)" style="display:none;">✕ entfernen</button>
+                            </div>
+                            <input type="text" placeholder="Name des Charakters" class="char-name">
+                            <textarea placeholder="Feedback zu diesem Charakter..." class="char-feedback"></textarea>
+                        </div>
+                        <button type="button" class="add-card" onclick="addCharacter()">
+                            <span>+</span> Charakter hinzufügen
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Plot -->
+                <div class="field-group">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                        <label style="margin-bottom: 0;">Plot</label>
+                        <div class="hint-trigger">
+                            💡
+                            <div class="hint-box">
+                                <h4>Fragen zum Nachdenken:</h4>
+                                <ul>
+                                    <li>Was ist der Konflikt in dieser Szene?</li>
+                                    <li>Steigt die Spannung oder flacht sie ab?</li>
+                                    <li>Gibt es einen klaren Einsatz (was steht auf dem Spiel)?</li>
+                                    <li>Treibt die Szene die Handlung voran?</li>
+                                    <li>Gibt es Überraschungen oder ist alles vorhersehbar?</li>
+                                    <li>Ist das Pacing angemessen?</li>
+                                    <li>Funktioniert der Szenenanfang als Hook?</li>
+                                    <li>Hat die Szene einen befriedigenden Abschluss?</li>
+                                    <li>Sind Ursache und Wirkung klar?</li>
+                                    <li>Gibt es unnötige Wiederholungen?</li>
+                                    <li>Werden Foreshadowing-Elemente gesetzt?</li>
+                                    <li>Stimmt die Timeline / Chronologie?</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <textarea id="plot" rows="4" placeholder="Was leistet der Plot an dieser Stelle?"></textarea>
+                </div>
+
+                <!-- Was das Kapitel leistet -->
+                <div class="field-group">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                        <label style="margin-bottom: 0;">Was das Kapitel leistet</label>
+                        <div class="hint-trigger">
+                            💡
+                            <div class="hint-box">
+                                <h4>Funktionale Fragen:</h4>
+                                <ul>
+                                    <li>Welche Charaktere lerne ich kennen/besser kennen?</li>
+                                    <li>Welche neuen Informationen erhalte ich?</li>
+                                    <li>Was treibt die Handlung voran?</li>
+                                    <li>Welche Fragen werden aufgeworfen?</li>
+                                    <li>Welche Fragen werden beantwortet?</li>
+                                    <li>Was verändert sich (emotional, physisch, relational)?</li>
+                                    <li>Worldbuilding: Was lerne ich über die Welt?</li>
+                                    <li>Welche Konflikte werden etabliert/vertieft?</li>
+                                    <li>Macht das Kapitel neugierig aufs Nächste?</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <textarea id="chapterFunction" rows="4" placeholder="Was das Kapitel für mich leistet (z.B. Charaktere kennenlernen, Worldbuilding, Plot vorantreiben...)"></textarea>
+                </div>
+
+                <!-- Kritische Anmerkungen -->
+                <div class="field-group">
+                    <label>Kritische Anmerkungen</label>
+                    <textarea id="critique" rows="4" placeholder="Formatierungsschwächen, Logiklöcher, Pacing-Probleme, etc."></textarea>
+                </div>
+
+                <!-- Positive Eindrücke -->
+                <div class="field-group">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                        <label style="margin-bottom: 0;">Positive Eindrücke</label>
+                        <div class="hint-trigger">
+                            💡
+                            <div class="hint-box">
+                                <h4>Was könnte gut sein?</h4>
+                                <ul>
+                                    <li>Besonders gelungene Formulierungen</li>
+                                    <li>Emotionale Momente, die berühren</li>
+                                    <li>Starke Dialoge</li>
+                                    <li>Überraschende Wendungen</li>
+                                    <li>Atmosphärische Beschreibungen</li>
+                                    <li>Authentische Charaktermomente</li>
+                                    <li>Gutes Pacing / Spannungsaufbau</li>
+                                    <li>Cleveres Foreshadowing</li>
+                                    <li>Humor, der funktioniert</li>
+                                    <li>Sinnliche Details</li>
+                                    <li>Subtext in Dialogen</li>
+                                    <li>Konsistenz mit früheren Kapiteln</li>
+                                    <li>Mutige Entscheidungen</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <textarea id="positive" rows="4" placeholder="Was dir besonders gefallen hat..."></textarea>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button type="button" class="btn-primary" onclick="generateFeedback()">
+                    <span>📋</span> Feedback generieren & kopieren
+                </button>
+                <button type="button" class="btn-secondary" onclick="clearForm()">
+                    Formular leeren
+                </button>
+            </div>
+        </form>
+
+        <!-- Output -->
+        <div class="output-section" id="outputSection">
+            <div class="output-header">
+                <h2 class="section-title">Vorschau</h2>
+                <button type="button" class="btn-secondary" onclick="copyToClipboard()">
+                    Nochmal kopieren
+                </button>
+            </div>
+            <div class="output-preview" id="outputPreview"></div>
+        </div>
+    </div>
+
+    <div class="copy-success" id="copySuccess">✓ In die Zwischenablage kopiert!</div>
+
+    <script>
+        let quoteCount = 1;
+        let characterCount = 1;
+
+        // Insert quick tag into the nearest textarea
+        function insertTag(tagElement, text) {
+            const card = tagElement.closest('.card-item');
+            const textarea = card.querySelector('.quote-comment');
+            const currentValue = textarea.value;
+            
+            if (currentValue && !currentValue.endsWith(' ') && !currentValue.endsWith('\n')) {
+                textarea.value = currentValue + ' ' + text;
+            } else {
+                textarea.value = currentValue + text;
+            }
+            
+            textarea.focus();
+            
+            // Visual feedback
+            tagElement.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                tagElement.style.transform = '';
+            }, 100);
+        }
+
+        // Quote functions
+        function addQuote() {
+            const grid = document.getElementById('quotesGrid');
+            const addBtn = grid.querySelector('.add-card');
+            
+            const card = document.createElement('div');
+            card.className = 'card-item';
+            card.dataset.index = quoteCount;
+            card.innerHTML = `
+                <div class="card-header">
+                    <span class="card-label">Zitat #${quoteCount + 1}</span>
+                    <button type="button" class="remove-btn" onclick="removeQuote(${quoteCount})">✕ entfernen</button>
+                </div>
+                <textarea class="quote-input quote-text" placeholder="Hier den zu kommentierenden Text einfügen..."></textarea>
+                <label style="margin-top: 1rem;"><small>Dein Kommentar:</small></label>
+                <span class="quick-tags-label">Schnell-Tags (klicken zum Einfügen):</span>
+                <div class="quick-tags">
+                    <span class="quick-tag" onclick="insertTag(this, 'Tell.')">Tell.</span>
+                    <span class="quick-tag" onclick="insertTag(this, 'Show!')">Show!</span>
+                    <span class="quick-tag" onclick="insertTag(this, 'Satzbau.')">Satzbau.</span>
+                    <span class="quick-tag" onclick="insertTag(this, 'Wortwiederholung.')">Wortwiederholung.</span>
+                    <span class="quick-tag" onclick="insertTag(this, 'Love it.')">Love it.</span>
+                    <span class="quick-tag" onclick="insertTag(this, 'Wunderschön.')">Wunderschön.</span>
+                    <span class="quick-tag" onclick="insertTag(this, 'Redundant.')">Redundant.</span>
+                    <span class="quick-tag" onclick="insertTag(this, 'Unklar.')">Unklar.</span>
+                    <span class="quick-tag" onclick="insertTag(this, 'Pacing.')">Pacing.</span>
+                    <span class="quick-tag" onclick="insertTag(this, 'Dialog 👍')">Dialog 👍</span>
+                    <span class="quick-tag" onclick="insertTag(this, 'As-you-know-Bob.')">As-you-know-Bob.</span>
+                    <span class="quick-tag" onclick="insertTag(this, 'Metapher passt nicht.')">Metapher ✗</span>
+                </div>
+                <textarea class="quote-comment" rows="2" placeholder="Deine Anmerkung zu dieser Stelle..."></textarea>
+            `;
+            
+            grid.insertBefore(card, addBtn);
+            quoteCount++;
+            updateQuoteRemoveButtons();
+        }
+
+        function removeQuote(index) {
+            const card = document.querySelector(`#quotesGrid .card-item[data-index="${index}"]`);
+            if (card) {
+                card.remove();
+                updateQuoteRemoveButtons();
+                renumberQuotes();
+            }
+        }
+
+        function updateQuoteRemoveButtons() {
+            const cards = document.querySelectorAll('#quotesGrid .card-item');
+            cards.forEach(card => {
+                const btn = card.querySelector('.remove-btn');
+                btn.style.display = cards.length > 1 ? 'block' : 'none';
+            });
+        }
+
+        function renumberQuotes() {
+            const cards = document.querySelectorAll('#quotesGrid .card-item');
+            cards.forEach((card, i) => {
+                card.querySelector('.card-label').textContent = `Zitat #${i + 1}`;
+            });
+        }
+
+        // Character functions
+        function addCharacter() {
+            const grid = document.getElementById('characterGrid');
+            const addBtn = grid.querySelector('.add-card');
+            
+            const card = document.createElement('div');
+            card.className = 'card-item';
+            card.dataset.index = characterCount;
+            card.innerHTML = `
+                <div class="card-header">
+                    <span class="card-label">Charakter #${characterCount + 1}</span>
+                    <button type="button" class="remove-btn" onclick="removeCharacter(${characterCount})">✕ entfernen</button>
+                </div>
+                <input type="text" placeholder="Name des Charakters" class="char-name">
+                <textarea placeholder="Feedback zu diesem Charakter..." class="char-feedback"></textarea>
+            `;
+            
+            grid.insertBefore(card, addBtn);
+            characterCount++;
+            updateCharacterRemoveButtons();
+        }
+
+        function removeCharacter(index) {
+            const card = document.querySelector(`#characterGrid .card-item[data-index="${index}"]`);
+            if (card) {
+                card.remove();
+                updateCharacterRemoveButtons();
+                renumberCharacters();
+            }
+        }
+
+        function updateCharacterRemoveButtons() {
+            const cards = document.querySelectorAll('#characterGrid .card-item');
+            cards.forEach(card => {
+                const btn = card.querySelector('.remove-btn');
+                btn.style.display = cards.length > 1 ? 'block' : 'none';
+            });
+        }
+
+        function renumberCharacters() {
+            const cards = document.querySelectorAll('#characterGrid .card-item');
+            cards.forEach((card, i) => {
+                card.querySelector('.card-label').textContent = `Charakter #${i + 1}`;
+            });
+        }
+
+        function getChapterTitle() {
+            const type = document.getElementById('chapterType').value;
+            const number = document.getElementById('chapterNumber').value.trim();
+            
+            if (type === 'custom') {
+                return number || 'Feedback';
+            }
+            
+            const labels = {
+                'prolog': 'Prolog',
+                'kapitel': 'Kapitel',
+                'epilog': 'Epilog',
+                'szene': 'Szene'
+            };
+            
+            const label = labels[type] || 'Kapitel';
+            
+            if (number) {
+                return `${label} ${number}`;
+            }
+            return label;
+        }
+
+        function generateFeedback() {
+            const chapterTitle = getChapterTitle();
+            const plot = document.getElementById('plot').value.trim();
+            const chapterFunction = document.getElementById('chapterFunction').value.trim();
+            const critique = document.getElementById('critique').value.trim();
+            const positive = document.getElementById('positive').value.trim();
+
+            // Collect quotes
+            const quotes = [];
+            document.querySelectorAll('#quotesGrid .card-item').forEach(card => {
+                const text = card.querySelector('.quote-text').value.trim();
+                const comment = card.querySelector('.quote-comment').value.trim();
+                if (text || comment) {
+                    quotes.push({ text, comment });
+                }
+            });
+
+            // Collect character feedback
+            const characters = [];
+            document.querySelectorAll('#characterGrid .card-item').forEach(card => {
+                const name = card.querySelector('.char-name').value.trim();
+                const feedback = card.querySelector('.char-feedback').value.trim();
+                if (name || feedback) {
+                    characters.push({ name: name || 'Unbenannt', feedback });
+                }
+            });
+
+            // Build HTML for clipboard (rich text)
+            let html = '';
+            
+            // Chapter title
+            html += `<p style="font-family: 'Times New Roman', serif; font-size: 14pt; font-weight: bold;">${chapterTitle}</p>`;
+            
+            // Quotes and comments
+            quotes.forEach(q => {
+                if (q.text) {
+                    html += `<p style="font-family: 'Times New Roman', serif; font-size: 13pt; font-style: italic;">"${q.text}"</p>`;
+                }
+                if (q.comment) {
+                    html += `<p style="font-family: 'Times New Roman', serif; font-size: 12pt; margin-left: 40px;">${q.comment}</p>`;
+                }
+            });
+
+            // Summary feedback header
+            const hasSummary = characters.length > 0 || plot || chapterFunction || critique || positive;
+            if (hasSummary && quotes.length > 0) {
+                html += `<p style="font-family: 'Times New Roman', serif; font-size: 12pt; font-weight: bold; margin-top: 20px;">Feedback zu ${chapterTitle}:</p>`;
+            }
+
+            if (characters.length > 0) {
+                html += `<p style="font-family: 'Times New Roman', serif; font-size: 12pt; font-weight: bold; margin-top: 16px;">Charakter:</p>`;
+                characters.forEach(char => {
+                    html += `<p style="font-family: 'Times New Roman', serif; font-size: 12pt;"><strong>${char.name}:</strong> ${char.feedback}</p>`;
+                });
+            }
+
+            if (plot) {
+                html += `<p style="font-family: 'Times New Roman', serif; font-size: 12pt; font-weight: bold; margin-top: 16px;">Plot:</p>`;
+                html += `<p style="font-family: 'Times New Roman', serif; font-size: 12pt;">${plot}</p>`;
+            }
+
+            if (chapterFunction) {
+                html += `<p style="font-family: 'Times New Roman', serif; font-size: 12pt; font-weight: bold; margin-top: 16px;">Was das Kapitel für mich leistet:</p>`;
+                html += `<p style="font-family: 'Times New Roman', serif; font-size: 12pt;">${chapterFunction}</p>`;
+            }
+
+            if (critique) {
+                html += `<p style="font-family: 'Times New Roman', serif; font-size: 12pt; font-weight: bold; margin-top: 16px;">Kritische Anmerkungen:</p>`;
+                html += `<p style="font-family: 'Times New Roman', serif; font-size: 12pt;">${critique}</p>`;
+            }
+
+            if (positive) {
+                html += `<p style="font-family: 'Times New Roman', serif; font-size: 12pt; font-weight: bold; margin-top: 16px;">Positive Eindrücke:</p>`;
+                html += `<p style="font-family: 'Times New Roman', serif; font-size: 12pt;">${positive}</p>`;
+            }
+
+            // Build preview
+            let preview = `<div class="preview-chapter">${chapterTitle}</div>`;
+            
+            quotes.forEach(q => {
+                if (q.text) {
+                    preview += `<div class="preview-quote">"${q.text}"</div>`;
+                }
+                if (q.comment) {
+                    preview += `<div class="preview-comment">${q.comment}</div>`;
+                }
+            });
+
+            if (hasSummary && quotes.length > 0) {
+                preview += `<div class="preview-heading" style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--glass-border);">Feedback zu ${chapterTitle}:</div>`;
+            }
+
+            if (characters.length > 0) {
+                preview += `<div class="preview-heading">Charakter:</div>`;
+                characters.forEach(char => {
+                    preview += `<div class="preview-content"><strong>${char.name}:</strong> ${char.feedback}</div>`;
+                });
+            }
+            if (plot) {
+                preview += `<div class="preview-heading">Plot:</div>`;
+                preview += `<div class="preview-content">${plot}</div>`;
+            }
+            if (chapterFunction) {
+                preview += `<div class="preview-heading">Was das Kapitel für mich leistet:</div>`;
+                preview += `<div class="preview-content">${chapterFunction}</div>`;
+            }
+            if (critique) {
+                preview += `<div class="preview-heading">Kritische Anmerkungen:</div>`;
+                preview += `<div class="preview-content">${critique}</div>`;
+            }
+            if (positive) {
+                preview += `<div class="preview-heading">Positive Eindrücke:</div>`;
+                preview += `<div class="preview-content">${positive}</div>`;
+            }
+
+            document.getElementById('outputPreview').innerHTML = preview;
+            document.getElementById('outputSection').classList.add('visible');
+
+            // Copy to clipboard as rich text
+            copyRichText(html);
+        }
+
+        function copyRichText(html) {
+            const blob = new Blob([html], { type: 'text/html' });
+            const plainText = html.replace(/<[^>]*>/g, '\n').replace(/\n+/g, '\n').trim();
+            const textBlob = new Blob([plainText], { type: 'text/plain' });
+            
+            const clipboardItem = new ClipboardItem({
+                'text/html': blob,
+                'text/plain': textBlob
+            });
+
+            navigator.clipboard.write([clipboardItem]).then(() => {
+                showCopySuccess();
+            }).catch(err => {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = plainText;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showCopySuccess();
+            });
+        }
+
+        function copyToClipboard() {
+            generateFeedback();
+        }
+
+        function showCopySuccess() {
+            const msg = document.getElementById('copySuccess');
+            msg.classList.add('show');
+            setTimeout(() => msg.classList.remove('show'), 2000);
+        }
+
+        function clearForm() {
+            document.getElementById('feedbackForm').reset();
+            document.getElementById('chapterType').value = 'kapitel';
+            
+            // Reset quotes to just one
+            const quotesGrid = document.getElementById('quotesGrid');
+            const quoteCards = quotesGrid.querySelectorAll('.card-item');
+            quoteCards.forEach((card, i) => {
+                if (i > 0) card.remove();
+            });
+            const firstQuote = quotesGrid.querySelector('.card-item');
+            firstQuote.querySelector('.quote-text').value = '';
+            firstQuote.querySelector('.quote-comment').value = '';
+            firstQuote.querySelector('.remove-btn').style.display = 'none';
+            firstQuote.querySelector('.card-label').textContent = 'Zitat #1';
+            quoteCount = 1;
+            
+            // Reset characters to just one
+            const charGrid = document.getElementById('characterGrid');
+            const charCards = charGrid.querySelectorAll('.card-item');
+            charCards.forEach((card, i) => {
+                if (i > 0) card.remove();
+            });
+            const firstChar = charGrid.querySelector('.card-item');
+            firstChar.querySelector('.char-name').value = '';
+            firstChar.querySelector('.char-feedback').value = '';
+            firstChar.querySelector('.remove-btn').style.display = 'none';
+            firstChar.querySelector('.card-label').textContent = 'Charakter #1';
+            characterCount = 1;
+            
+            document.getElementById('outputSection').classList.remove('visible');
+        }
+    </script>
+</body>
+</html>
